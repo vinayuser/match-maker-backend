@@ -54,4 +54,43 @@ Default base URL: `http://localhost:4000`
 Send JWT as: `Authorization: Bearer <token>`.
 
 After final review, wire the frontend: register → store token → each onboarding step `PATCH` with merged session payload → last step `POST /onboarding/submit`.
+
+## Admin auth & role API
+
+Admin system supports two roles:
+
+- `super_admin`: full admin control (create/update/list admin accounts)
+- `matchmaker_admin`: limited permissions decided by super admin
+
+`admin_users.permissions` is a JSON array of permission keys (e.g. `["profiles:read","matches:update"]`).
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/v1/admin/auth/bootstrap` | No | One-time bootstrap for first super admin `{ email, password, name }` (blocked if any super admin exists) |
+| POST | `/api/v1/admin/auth/login` | No | Admin login `{ email, password }` → `{ token, admin }` |
+| GET | `/api/v1/admin/auth/me` | Bearer Admin JWT | Current admin profile |
+| POST | `/api/v1/admin/users` | Bearer Admin JWT (`super_admin`) | Create matchmaker admin `{ email, password, name, permissions[] }` |
+| GET | `/api/v1/admin/users` | Bearer Admin JWT (`super_admin`) | List all admin users |
+| PATCH | `/api/v1/admin/users/:id` | Bearer Admin JWT (`super_admin`) | Update matchmaker admin `{ name?, permissions?, isActive?, password? }` |
+| GET | `/api/v1/admin/approval-queue` | Bearer Admin JWT (`super_admin` or `matchmaker_admin`) | List pending profile registrations for review |
+| PATCH | `/api/v1/admin/approval-queue/:userId/review` | Bearer Admin JWT (`super_admin` or `matchmaker_admin`) | Review profile `{ decision: "approve" \| "reject", note? }` |
+
+Admin JWT uses `ADMIN_JWT_SECRET` (falls back to `JWT_SECRET` if missing).
+
+## Seeder for approval queue
+
+Populate sample user registrations for admin moderation:
+
+```bash
+npm run seed:approval-queue
+```
+
+This creates seeded users/profiles, including pending, approved, and rejected records.  
+All seeded users use password: `User@12345`.
+
+Reset (delete seeded records only):
+
+```bash
+npm run seed:approval-queue:reset
+```
 # match-maker-backend

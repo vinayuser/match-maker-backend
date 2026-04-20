@@ -6,7 +6,9 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "seed:approval-queue": "node scripts/seedApprovalQueue.js",
+    "seed:approval-queue:reset": "node scripts/seedApprovalQueue.js --reset"
   },
   "engines": {
     "node": ">=18"

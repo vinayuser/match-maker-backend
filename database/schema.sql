@@ -24,6 +24,27 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------------
+-- Admin users (super admin + matchmaker admins with scoped permissions)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS admin_users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  email VARCHAR(255) NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  role ENUM('super_admin','matchmaker_admin') NOT NULL DEFAULT 'matchmaker_admin',
+  password_hash VARCHAR(255) NOT NULL,
+  permissions JSON NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by BIGINT UNSIGNED DEFAULT NULL,
+  last_login_at DATETIME(3) DEFAULT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_admin_users_email (email),
+  KEY idx_admin_users_role_active (role, is_active),
+  CONSTRAINT fk_admin_users_creator FOREIGN KEY (created_by) REFERENCES admin_users (id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------------
 -- Profile (one row per user — avoids hot rows on users table)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -134,6 +155,7 @@ CREATE TABLE IF NOT EXISTS user_photos (
   is_primary TINYINT(1) NOT NULL DEFAULT 0,
   moderation_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   KEY idx_photos_user (user_id),
   CONSTRAINT fk_photos_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -167,6 +189,7 @@ CREATE TABLE IF NOT EXISTS matches (
   matchmaker_id BIGINT UNSIGNED DEFAULT NULL,
   status ENUM('active','closed') NOT NULL DEFAULT 'active',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   UNIQUE KEY uq_match_pair (user_a_id, user_b_id),
   KEY idx_match_user_a (user_a_id, status),
@@ -174,5 +197,30 @@ CREATE TABLE IF NOT EXISTS matches (
   CONSTRAINT fk_ma FOREIGN KEY (user_a_id) REFERENCES users (id) ON DELETE CASCADE,
   CONSTRAINT fk_mb FOREIGN KEY (user_b_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- Backfill missing audit columns on existing tables.
+SET @stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'user_photos'
+      AND COLUMN_NAME = 'updated_at') = 0,
+  'ALTER TABLE user_photos ADD COLUMN updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)',
+  'SELECT 1'
+);
+PREPARE stmt FROM @stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @stmt = IF(
+  (SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'matches'
+      AND COLUMN_NAME = 'updated_at') = 0,
+  'ALTER TABLE matches ADD COLUMN updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)',
+  'SELECT 1'
+);
+PREPARE stmt FROM @stmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 SET FOREIGN_KEY_CHECKS = 1;
