@@ -42,6 +42,11 @@ module.exports.login = async (req, res, next) => {
   }
 };
 
-module.exports.me = async (req, res) => {
-  return res.success("OK", { user: req.user });
+module.exports.me = async (req, res, next) => {
+  try {
+    const user = await AuthService.getUserMe(req.user.id);
+    return res.success("OK", { user: user || req.user });
+  } catch (e) {
+    return next(e);
+  }
 };

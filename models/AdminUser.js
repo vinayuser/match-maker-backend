@@ -19,6 +19,11 @@ AdminUser.init(
       type: DataTypes.STRING(120),
       allowNull: false
     },
+    avatarUrl: {
+      type: DataTypes.STRING(1024),
+      allowNull: true,
+      field: "avatar_url"
+    },
     role: {
       type: DataTypes.ENUM("super_admin", "matchmaker_admin"),
       allowNull: false,

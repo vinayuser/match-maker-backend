@@ -1,15 +1,18 @@
 const bcrypt = require("bcryptjs");
 const { AdminUser } = require("../models");
 const { signAdminToken } = require("../common/authenticateAdmin");
+const { ensureAccessControlSeedData, getAdminAccessProfile } = require("./adminAccess.service");
 
-function sanitizeAdmin(admin) {
+function sanitizeAdmin(admin, accessProfile) {
   return {
     id: admin.id,
     email: admin.email,
     name: admin.name,
     role: admin.role,
-    permissions: Array.isArray(admin.permissions) ? admin.permissions : [],
-    isActive: admin.isActive
+    permissions: accessProfile?.effectivePermissions || (Array.isArray(admin.permissions) ? admin.permissions : []),
+    roles: accessProfile?.roles || [],
+    isActive: admin.isActive,
+    isLocked: !admin.isActive
   };
 }
 
@@ -24,6 +27,7 @@ async function findAdminByEmail(email) {
 }
 
 async function bootstrapSuperAdmin({ email, password, name }) {
+  await ensureAccessControlSeedData();
   const existingSuperAdmins = await countSuperAdmins();
   if (existingSuperAdmins > 0) {
     const error = new Error("SUPER_ADMIN_ALREADY_EXISTS");
@@ -56,10 +60,12 @@ async function bootstrapSuperAdmin({ email, password, name }) {
     email: admin.email
   });
 
-  return { token, admin: sanitizeAdmin(admin) };
+  const accessProfile = await getAdminAccessProfile(admin.id);
+  return { token, admin: sanitizeAdmin(admin, accessProfile) };
 }
 
 async function loginAdmin(email, password) {
+  await ensureAccessControlSeedData();
   const admin = await findAdminByEmail(email);
   if (!admin) {
     const error = new Error("INVALID_ADMIN_CREDENTIALS");
@@ -90,7 +96,8 @@ async function loginAdmin(email, password) {
     email: admin.email
   });
 
-  return { token, admin: sanitizeAdmin(admin) };
+  const accessProfile = await getAdminAccessProfile(admin.id);
+  return { token, admin: sanitizeAdmin(admin, accessProfile) };
 }
 
 module.exports = {

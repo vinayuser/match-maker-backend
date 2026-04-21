@@ -2,6 +2,18 @@ const bcrypt = require("bcryptjs");
 const { Op, QueryTypes } = require("sequelize");
 const { AdminUser, User, UserProfile, UserPhoto, sequelize } = require("../models");
 
+let adminUsersColumnCache = null;
+
+async function getAdminUsersColumnNames() {
+  if (adminUsersColumnCache) return adminUsersColumnCache;
+  const table = await sequelize.getQueryInterface().describeTable("admin_users");
+  adminUsersColumnCache = {
+    created: table.created_at ? "created_at" : "createdAt",
+    lastLogin: table.last_login_at ? "last_login_at" : "lastLoginAt"
+  };
+  return adminUsersColumnCache;
+}
+
 function sanitizeAdmin(admin) {
   return {
     id: admin.id,
@@ -40,6 +52,7 @@ async function createMatchmakerAdmin(payload, creatorId) {
 }
 
 async function listAdmins() {
+  const adminCols = await getAdminUsersColumnNames();
   const admins = await AdminUser.findAll({
     attributes: [
       "id",
@@ -49,10 +62,10 @@ async function listAdmins() {
       "permissions",
       "isActive",
       "createdBy",
-      "lastLoginAt",
-      "createdAt"
+      [sequelize.col(`AdminUser.${adminCols.lastLogin}`), "lastLoginAt"],
+      [sequelize.col(`AdminUser.${adminCols.created}`), "createdAt"]
     ],
-    order: [["createdAt", "DESC"]]
+    order: [[sequelize.col(`AdminUser.${adminCols.created}`), "DESC"]]
   });
 
   return admins.map(sanitizeAdmin);

@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const { AdminUser } = require("../models");
+const { getAdminAccessProfile } = require("../services/adminAccess.service");
 
 function getBearerToken(req) {
   const raw = req.headers.authorization || req.headers.Authorization || "";
@@ -42,19 +42,19 @@ async function authenticateAdmin(req, res, next) {
       return res.error(401, "INVALID_ADMIN_TOKEN");
     }
 
-    const admin = await AdminUser.findByPk(adminId, {
-      attributes: ["id", "email", "name", "role", "permissions", "isActive"]
-    });
-    if (!admin || !admin.isActive) {
+    const accessProfile = await getAdminAccessProfile(adminId);
+    if (!accessProfile?.admin || !accessProfile.admin.isActive) {
       return res.error(401, "ADMIN_ACCOUNT_INACTIVE");
     }
+    const admin = accessProfile.admin;
 
     req.admin = {
       id: admin.id,
       email: admin.email,
       name: admin.name,
       role: admin.role,
-      permissions: Array.isArray(admin.permissions) ? admin.permissions : []
+      permissions: accessProfile.effectivePermissions,
+      roles: accessProfile.roles
     };
     return next();
   } catch (error) {
@@ -70,8 +70,22 @@ function authorizeRoles(...roles) {
   };
 }
 
+function authorizePermissions(...requiredPermissions) {
+  return (req, res, next) => {
+    if (!req.admin) return res.error(401, "ADMIN_UNAUTHORIZED");
+    if (req.admin.role === "super_admin") return next();
+    if (requiredPermissions.length === 0) return next();
+
+    const current = Array.isArray(req.admin.permissions) ? req.admin.permissions : [];
+    const hasAll = requiredPermissions.every((permission) => current.includes(permission));
+    if (!hasAll) return res.error(403, "ADMIN_PERMISSION_DENIED");
+    return next();
+  };
+}
+
 module.exports = {
   authenticateAdmin,
   authorizeRoles,
+  authorizePermissions,
   signAdminToken
 };

@@ -1,5 +1,5 @@
 const bcrypt = require("bcryptjs");
-const { User, UserProfile, sequelize } = require("../models");
+const { User, UserProfile, UserPhoto, sequelize } = require("../models");
 const { signToken } = require("../common/authenticate");
 
 async function createUser(email, password) {
@@ -68,19 +68,70 @@ async function login(email, password) {
     throw err;
   }
   const token = signToken({ sub: user.id, userId: user.id, email: user.email });
+  const avatar = await UserPhoto.findOne({
+    where: { userId: user.id },
+    attributes: ["imageUrl"],
+    order: [
+      ["isPrimary", "DESC"],
+      ["sortOrder", "ASC"],
+      ["id", "ASC"]
+    ]
+  });
+  const firstName = user.profile?.firstName || "";
+  const lastName = user.profile?.lastName || "";
+  const displayName = `${firstName} ${lastName}`.trim() || user.email.split("@")[0];
   return {
     token,
     user: {
       id: user.id,
       email: user.email,
+      firstName,
+      lastName,
+      displayName,
+      avatarUrl: avatar?.imageUrl || "",
       profileStatus,
       verificationStatus
     }
   };
 }
 
+async function getUserMe(userId) {
+  const user = await User.findByPk(userId, {
+    include: [
+      {
+        model: UserProfile,
+        as: "profile",
+        attributes: ["firstName", "lastName", "profileStatus", "verificationStatus"]
+      }
+    ]
+  });
+  if (!user) return null;
+  const avatar = await UserPhoto.findOne({
+    where: { userId: user.id },
+    attributes: ["imageUrl"],
+    order: [
+      ["isPrimary", "DESC"],
+      ["sortOrder", "ASC"],
+      ["id", "ASC"]
+    ]
+  });
+  const firstName = user.profile?.firstName || "";
+  const lastName = user.profile?.lastName || "";
+  return {
+    id: user.id,
+    email: user.email,
+    firstName,
+    lastName,
+    displayName: `${firstName} ${lastName}`.trim() || user.email.split("@")[0],
+    avatarUrl: avatar?.imageUrl || "",
+    profileStatus: user.profile?.profileStatus || "draft",
+    verificationStatus: user.profile?.verificationStatus || "unverified"
+  };
+}
+
 module.exports = {
   createUser,
   findByEmail,
-  login
+  login,
+  getUserMe
 };

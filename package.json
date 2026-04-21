@@ -7,8 +7,12 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "migrate": "node scripts/migrate.js",
+    "migrate:status": "node scripts/migrate.js --status",
     "seed:approval-queue": "node scripts/seedApprovalQueue.js",
-    "seed:approval-queue:reset": "node scripts/seedApprovalQueue.js --reset"
+    "seed:approval-queue:reset": "node scripts/seedApprovalQueue.js --reset",
+    "seed:discovery-users": "node scripts/seedDiscoveryUsers.js",
+    "seed:discovery-users:reset": "node scripts/seedDiscoveryUsers.js --reset"
   },
   "engines": {
     "node": ">=18"
