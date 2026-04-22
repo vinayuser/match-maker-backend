@@ -16,6 +16,11 @@ router.post("/api/v1/auth/login", AuthController.login);
 router.get("/api/v1/auth/me", authenticateUser, AuthController.me);
 router.get("/api/v1/discovery/cards", authenticateUser, DiscoveryController.cards);
 router.post("/api/v1/discovery/:targetUserId/connect", authenticateUser, DiscoveryController.sendInterest);
+router.post("/api/v1/discovery/:targetUserId/not-interested", authenticateUser, DiscoveryController.markNotInterested);
+router.get("/api/v1/discovery/sent-requests", authenticateUser, DiscoveryController.sentRequests);
+router.get("/api/v1/discovery/favorites", authenticateUser, DiscoveryController.favorites);
+router.post("/api/v1/discovery/:targetUserId/favorite", authenticateUser, DiscoveryController.favorite);
+router.delete("/api/v1/discovery/:targetUserId/favorite", authenticateUser, DiscoveryController.unfavorite);
 
 router.post("/api/v1/admin/auth/bootstrap", AdminAuthController.bootstrapSuperAdmin);
 router.post("/api/v1/admin/auth/login", AdminAuthController.login);
