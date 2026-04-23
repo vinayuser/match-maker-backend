@@ -12,12 +12,22 @@ const app = express();
 
 app.use(responses());
 
+const allowedOrigins = [
+  "https://admin.rainbowstonerealestate.com",
+  "http://localhost:5173"
+];
+
 const corsOptions = {
-  origin: true,
-  credentials: false,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
-  optionsSuccessStatus: 204
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
 };
 
 app.use(cors(corsOptions));
