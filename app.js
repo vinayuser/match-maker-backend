@@ -12,13 +12,37 @@ const app = express();
 
 app.use(responses());
 
-const corsOrigin = process.env.CORS_ORIGIN || "*";
-app.use(
-  cors({
-    origin: corsOrigin === "*" ? true : corsOrigin.split(",").map((s) => s.trim()),
-    credentials: true
-  })
-);
+const defaultAllowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://admin.rainbowstonerealestate.com",
+  "https://test.rainbowstonerealestate.com"
+];
+const configuredOrigins = String(process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const allowedOrigins = configuredOrigins.length ? configuredOrigins : defaultAllowedOrigins;
+
+const corsOptions = {
+  origin(origin, callback) {
+    // allow non-browser or same-origin server calls
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    const error = new Error("CORS_NOT_ALLOWED");
+    error.status = 403;
+    return callback(error);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(
   helmet({

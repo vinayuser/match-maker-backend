@@ -12,7 +12,9 @@
     "seed:approval-queue": "node scripts/seedApprovalQueue.js",
     "seed:approval-queue:reset": "node scripts/seedApprovalQueue.js --reset",
     "seed:discovery-users": "node scripts/seedDiscoveryUsers.js",
-    "seed:discovery-users:reset": "node scripts/seedDiscoveryUsers.js --reset"
+    "seed:discovery-users:reset": "node scripts/seedDiscoveryUsers.js --reset",
+    "seed:full-dataset": "node scripts/seedFullDataset.js",
+    "seed:full-dataset:reset": "node scripts/seedFullDataset.js --reset"
   },
   "engines": {
     "node": ">=18"
